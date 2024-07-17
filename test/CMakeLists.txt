@@ -4,18 +4,18 @@ project(godot-cpp-test)
 set(GODOT_GDEXTENSION_DIR ../gdextension/ CACHE STRING "Path to GDExtension interface header directory")
 set(CPP_BINDINGS_PATH ../ CACHE STRING "Path to C++ bindings")
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	set(TARGET_PATH x11)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-	set(TARGET_PATH win64)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-	set(TARGET_PATH macos)
-else()
-	message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
-endif()
+include_directories(${CPP_BINDINGS_PATH})
+
+# Aragubas: These checks need to go right after including godot-cpp's CMakeLists.txt
+#if (NOT DEFINED GODOT_ARCH)
+#	message(FATAL_ERROR "Expected GODOT_ARCH to be defined by godot-cpp's CMakeLists.txt")
+#endif ()
+#if (NOT DEFINED GODOT_PLATFORM)
+#	message(FATAL_ERROR "Expected GODOT_PLATFORM to be defined by godot-cpp's CMakeLists.txt")
+#endif ()
 
 # Change the output directory to the bin directory
-set(BUILD_PATH ${CMAKE_SOURCE_DIR}/bin/${TARGET_PATH})
+set(BUILD_PATH ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${BUILD_PATH}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BUILD_PATH}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BUILD_PATH}")
@@ -58,8 +58,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	#endif()
 
 else()
-
-	set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-R,'$$ORIGIN'")
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-R,'$ORIGIN'")
+	else()
+		set(GODOT_LINKER_FLAGS "-Wl,-rpath,'$ORIGIN'")
+	endif()
 
 	set(GODOT_COMPILE_FLAGS "-fPIC -g -Wwrite-strings")
 
@@ -99,13 +102,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM
 		${GODOT_GDEXTENSION_DIR}
 )
 
-# Create the correct name (godot.os.build_type.system_bits)
+# Create the correct name (godot.os.build_type.godot_arch)
 # Synchronized with godot-cpp's CMakeLists.txt
-
-set(BITS 32)
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(BITS 64)
-endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	set(GODOT_CPP_BUILD_TYPE Debug)
@@ -113,13 +111,7 @@ else()
 	set(GODOT_CPP_BUILD_TYPE Release)
 endif()
 
-string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME)
 string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
-
-if(ANDROID)
-	# Added the android abi after system name
-	set(SYSTEM_NAME ${SYSTEM_NAME}.${ANDROID_ABI})
-endif()
 
 if(CMAKE_VERSION VERSION_GREATER "3.13")
 	target_link_directories(${PROJECT_NAME}
@@ -128,11 +120,11 @@ if(CMAKE_VERSION VERSION_GREATER "3.13")
 	)
 
 	target_link_libraries(${PROJECT_NAME}
-		godot-cpp.${SYSTEM_NAME}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${BITS}>
+		godot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>
 	)
 else()
 	target_link_libraries(${PROJECT_NAME}
-			${CPP_BINDINGS_PATH}/bin/libgodot-cpp.${SYSTEM_NAME}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${BITS}>.a
+			${CPP_BINDINGS_PATH}/bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
 	)
 endif()
 

@@ -1,3 +1,8 @@
+# Detect the compiler and save as variables for readability.
+set( compiler_is_clang "$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>" )
+set( compiler_is_gnu "$<CXX_COMPILER_ID:GNU>" )
+set( compiler_is_msvc "$<CXX_COMPILER_ID:MSVC>" )
+
 # Add warnings based on compiler & version
 # Set some helper variables for readability
 set( compiler_less_than_v8 "$<VERSION_LESS:$<CXX_COMPILER_VERSION>,8>" )
