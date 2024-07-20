@@ -199,3 +199,6 @@ venv
 # CMake
 /cmake_build/
 /test/cmake_build/
+CMakeFiles/
+build/
+Makefile

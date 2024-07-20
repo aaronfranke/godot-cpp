@@ -1,17 +1,25 @@
-# Detect the compiler and save as variables for readability.
+#
+#   Detect the compiler and save as variables for readability.
+#
 set( compiler_is_clang "$<OR:$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:Clang>>" )
 set( compiler_is_gnu "$<CXX_COMPILER_ID:GNU>" )
 set( compiler_is_msvc "$<CXX_COMPILER_ID:MSVC>" )
 
-# Add warnings based on compiler & version
-# Set some helper variables for readability
+
+#
+#   Add warnings based on compiler & version
+#   Set some helper variables for readability
+#
 set( compiler_less_than_v8 "$<VERSION_LESS:$<CXX_COMPILER_VERSION>,8>" )
 set( compiler_greater_than_or_equal_v9 "$<VERSION_GREATER_EQUAL:$<CXX_COMPILER_VERSION>,9>" )
 set( compiler_greater_than_or_equal_v11 "$<VERSION_GREATER_EQUAL:$<CXX_COMPILER_VERSION>,11>" )
 set( compiler_less_than_v11 "$<VERSION_LESS:$<CXX_COMPILER_VERSION>,11>" )
 set( compiler_greater_than_or_equal_v12 "$<VERSION_GREATER_EQUAL:$<CXX_COMPILER_VERSION>,12>" )
 
-# These compiler options reflect what is in godot/SConstruct.
+
+#
+#   These compiler options reflect what is in godot/SConstruct.
+#
 target_compile_options( ${PROJECT_NAME} PRIVATE
     # MSVC only
     $<${compiler_is_msvc}:
@@ -77,7 +85,10 @@ target_compile_options( ${PROJECT_NAME} PRIVATE
     >
 )
 
-# Treat warnings as errors
+
+#
+#   Treat warnings as errors
+#
 function( set_warning_as_error )
     message( STATUS "[${PROJECT_NAME}] Treating warnings as errors")
     if ( CMAKE_VERSION VERSION_GREATER_EQUAL "3.24" )
@@ -93,6 +104,7 @@ function( set_warning_as_error )
         )
     endif()
 endfunction()
+
 
 if ( GODOT_CPP_WARNING_AS_ERROR )
     set_warning_as_error()

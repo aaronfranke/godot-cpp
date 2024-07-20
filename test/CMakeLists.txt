@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.13)
-project(godot-cpp-test)
+project(godot-cpp-test LANGUAGES CXX)
 
-set(GODOT_GDEXTENSION_DIR ../gdextension/ CACHE STRING "Path to GDExtension interface header directory")
-set(CPP_BINDINGS_PATH ../ CACHE STRING "Path to C++ bindings")
+set(GODOT_GDEXTENSION_DIR "../gdextension/" CACHE STRING "Path to GDExtension interface header directory")
+#
+#	Set CPP_BINDINGS_PATH to one path above this one
+#
+cmake_path(SET CPP_BINDINGS_PATH NORMALIZE "../")
+cmake_path(ABSOLUTE_PATH CPP_BINDINGS_PATH NORMALIZE)
+
+message(${CPP_BINDINGS_PATH})
 
 include_directories(${CPP_BINDINGS_PATH})
+
 
 # Aragubas: These checks need to go right after including godot-cpp's CMakeLists.txt
 #if (NOT DEFINED GODOT_ARCH)
@@ -14,7 +21,10 @@ include_directories(${CPP_BINDINGS_PATH})
 #	message(FATAL_ERROR "Expected GODOT_PLATFORM to be defined by godot-cpp's CMakeLists.txt")
 #endif ()
 
-# Change the output directory to the bin directory
+
+#
+#	Change the output directory to the bin directory
+#
 set(BUILD_PATH ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${BUILD_PATH}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BUILD_PATH}")
@@ -26,16 +36,29 @@ SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
 
-# Set the c++ standard to c++17
+#
+#	Set Default build type to Debug
+#
+if("${CMAKE_BUILD_TYPE}" STREQUAL "")
+	set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+
+#
+#	Set the c++ standard to c++17
+#
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(GODOT_COMPILE_FLAGS )
-set(GODOT_LINKER_FLAGS )
+set(GODOT_COMPILE_FLAGS "")
+set(GODOT_LINKER_FLAGS "")
 
+#
+#	Set godot compile flags
+#
+# If compiling under MSVC
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	# using Visual Studio C++
 	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /WX") # /GF /MP
 	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /DTYPED_METHOD_BIND")
 
@@ -52,7 +75,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 	add_definitions(-DNOMINMAX)
 
-	# Unkomment for warning level 4
+	# Uncomment for warning level 4
 	#if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
 	#	string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	#endif()
@@ -73,8 +96,11 @@ else()
 	endif(CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
-# Disable exception handling. Godot doesn't use exceptions anywhere, and this
-# saves around 20% of binary size and very significant build time (GH-80513).
+
+#
+#	Disable exception handling. Godot doesn't use exceptions anywhere, and this
+#	saves around 20% of binary size and very significant build time (GH-80513).
+#
 option(GODOT_DISABLE_EXCEPTIONS ON "Force disabling exception handling code")
 if (GODOT_DISABLE_EXCEPTIONS)
 	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
@@ -88,35 +114,45 @@ else()
 	endif()
 endif()
 
-# Get Sources
-file(GLOB_RECURSE SOURCES src/*.c**)
-file(GLOB_RECURSE HEADERS include/*.h**)
 
-# Define our godot-cpp library
+#
+#	Set Sources
+#
+set(SOURCES "src/example.cpp" "src/register_types.cpp")
+set(HEADERS "src/example.h" "src/register_types.h" "src/tests.h")
+
+
+#
+#	Define our godot-cpp library
+#
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 target_include_directories(${PROJECT_NAME} SYSTEM
 	PRIVATE
-		${CPP_BINDINGS_PATH}/include
-		${CPP_BINDINGS_PATH}/gen/include
+		${CPP_BINDINGS_PATH}include
+		${CPP_BINDINGS_PATH}gen/include
 		${GODOT_GDEXTENSION_DIR}
 )
 
-# Create the correct name (godot.os.build_type.godot_arch)
-# Synchronized with godot-cpp's CMakeLists.txt
 
+#
+#	Create the correct name (godot.os.build_type.godot_arch)
+#	Synchronized with godot-cpp's CMakeLists.txt
+#
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	set(GODOT_CPP_BUILD_TYPE Debug)
 else()
 	set(GODOT_CPP_BUILD_TYPE Release)
 endif()
-
 string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
 
+#
+#	Link with godot-cpp
+#
 if(CMAKE_VERSION VERSION_GREATER "3.13")
 	target_link_directories(${PROJECT_NAME}
 		PRIVATE
-		${CPP_BINDINGS_PATH}/bin/
+		${CPP_BINDINGS_PATH}cmake_build/bin
 	)
 
 	target_link_libraries(${PROJECT_NAME}
@@ -124,11 +160,14 @@ if(CMAKE_VERSION VERSION_GREATER "3.13")
 	)
 else()
 	target_link_libraries(${PROJECT_NAME}
-			${CPP_BINDINGS_PATH}/bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
+			${CPP_BINDINGS_PATH}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
 	)
 endif()
 
-# Add the compile flags
+
+#
+#	Add the compile flags
+#
 set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS ${GODOT_COMPILE_FLAGS})
 set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS ${GODOT_LINKER_FLAGS})
 
