@@ -1,0 +1,18 @@
+#
+#	Detect host architecture
+#
+function(detect_host_arch HOST_ARCH)
+	if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64")
+		set(${HOST_ARCH} "x86_64" PARENT_SCOPE)
+	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "i386")
+		set(${HOST_ARCH} "x86_32" PARENT_SCOPE)
+	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "armv7-a" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm")
+		set(${HOST_ARCH} "arm32" PARENT_SCOPE)
+	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
+		set(${HOST_ARCH} "arm64" PARENT_SCOPE)
+	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv64")
+		set(${HOST_ARCH} "rv64" PARENT_SCOPE)
+	else ()
+		message(FATAL_ERROR "Unsupported host architecture ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+	endif ()
+endfunction()

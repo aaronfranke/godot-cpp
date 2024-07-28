@@ -42,8 +42,14 @@
 # Every godot API change, reconfigure the file
 
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.20)
 project(godot-cpp LANGUAGES CXX)
+
+#
+#	Include our custom cmake modules
+#
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+
 
 option(GENERATE_TEMPLATE_GET_NODE "Generate a template version of the Node class's get_node." ON)
 option(GODOT_CPP_SYSTEM_HEADERS "Expose headers as SYSTEM." ON)
@@ -53,139 +59,13 @@ option(GODOT_CPP_WARNING_AS_ERROR "Treat warnings as errors" OFF)
 #
 #	Detect host architecture
 #
-function(detect_host_arch HOST_ARCH)
-	if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "AMD64")
-		set(${HOST_ARCH} "x86_64" PARENT_SCOPE)
-	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "i386")
-		set(${HOST_ARCH} "x86_32" PARENT_SCOPE)
-	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "armv7-a" OR CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm")
-		set(${HOST_ARCH} "arm32" PARENT_SCOPE)
-	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "aarch64")
-		set(${HOST_ARCH} "arm64" PARENT_SCOPE)
-	elseif (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "riscv64")
-		set(${HOST_ARCH} "rv64" PARENT_SCOPE)
-	else ()
-		message(FATAL_ERROR "Unsupported host architecture ${CMAKE_HOST_SYSTEM_PROCESSOR}")
-	endif ()
-endfunction()
+include(DetectHostArchitecture)
 
 
 #
-#	If GODOT_ARCH is not defined, set it based on the target operating system and/or host architecture.
+#	Set Godot Arch and Godot Platform
 #
-if (NOT DEFINED GODOT_ARCH)
-	if (APPLE)
-		if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-			set(GODOT_ARCH "universal")
-		elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-			set(GODOT_ARCH "arm64")
-		else ()
-			message(FATAL_ERROR "Unsupported Apple operating system ${CMAKE_SYSTEM_NAME}")
-		endif ()
-	elseif (ANDROID)
-		set(GODOT_ARCH "arm64")
-	elseif (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-		set(GODOT_ARCH "wasm32")
-	elseif (WIN32 OR UNIX)
-		detect_host_arch(HOST_ARCH)
-		set(GODOT_ARCH ${HOST_ARCH})
-	else ()
-		message(FATAL_ERROR "Unsupported operating system ${CMAKE_SYSTEM_NAME}")
-	endif ()
-endif ()
-set(GODOT_ARCH "${GODOT_ARCH}" CACHE STRING "Target architecture (x86_32, x86_64, arm32, arm64, rv64, wasm32, universal)")
-
-
-#
-#	Convert the custom GODOT_ARCH flag to CMake OS-specific flags.
-#
-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-	set(GODOT_PLATFORM "android")
-	if (GODOT_ARCH STREQUAL "x86_32")
-		if (NOT ANDROID_ABI STREQUAL "x86")
-			message(FATAL_ERROR "For Godot architecture x86_32 on Android, you must set ANDROID_ABI to x86 on the command line to inform the Android toolchain. Use `-DGODOT_ARCH=x86_32 -DANDROID_ABI=x86`.")
-		endif()
-	elseif (GODOT_ARCH STREQUAL "x86_64")
-		if (NOT ANDROID_ABI STREQUAL "x86_64")
-			message(FATAL_ERROR "For Godot architecture x86_64 on Android, you must set ANDROID_ABI to x86_64 on the command line to inform the Android toolchain. Use `-DGODOT_ARCH=x86_64 -DANDROID_ABI=x86_64`.")
-		endif()
-	elseif (GODOT_ARCH STREQUAL "arm32")
-		if (NOT ANDROID_ABI STREQUAL "armeabi-v7a")
-			message(FATAL_ERROR "For Godot architecture arm32 on Android, you must set ANDROID_ABI to armeabi-v7a on the command line to inform the Android toolchain. Use `-DGODOT_ARCH=arm32 -DANDROID_ABI=armeabi-v7a`.")
-		endif()
-	elseif (GODOT_ARCH STREQUAL "arm64")
-		if (NOT ANDROID_ABI STREQUAL "arm64-v8a")
-			message(FATAL_ERROR "For Godot architecture arm64 on Android, you must set ANDROID_ABI to arm64-v8a on the command line to inform the Android toolchain. Use `-DGODOT_ARCH=arm64 -DANDROID_ABI=arm64-v8a`.")
-		endif()
-	else ()
-		message(FATAL_ERROR "Unsupported architecture ${GODOT_ARCH} for Android")
-	endif ()
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-	set(GODOT_PLATFORM "web")
-	if (GODOT_ARCH STREQUAL "wasm32")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s WASM=1" CACHE STRING "Build for wasm32 architecture on WebAssembly" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s WASM=1" CACHE STRING "Build for wasm32 architecture on WebAssembly" FORCE)
-	else ()
-		message(FATAL_ERROR "Unsupported architecture ${GODOT_ARCH} for WebAssembly")
-	endif ()
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	set(GODOT_PLATFORM "linux")
-	if (GODOT_ARCH STREQUAL "x86_32")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -march=i686" CACHE STRING "Build for x86_32 architecture on Linux" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -march=i686" CACHE STRING "Build for x86_32 architecture on Linux" FORCE)
-	elseif (GODOT_ARCH STREQUAL "x86_64")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64 -march=x86-64" CACHE STRING "Build for x86_64 architecture on Linux" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -march=x86-64" CACHE STRING "Build for x86_64 architecture on Linux" FORCE)
-	elseif (GODOT_ARCH STREQUAL "arm32")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv7-a" CACHE STRING "Build for arm32 architecture on Linux" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv7-a" CACHE STRING "Build for arm32 architecture on Linux" FORCE)
-	elseif (GODOT_ARCH STREQUAL "arm64")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv8-a" CACHE STRING "Build for arm64 architecture on Linux" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a" CACHE STRING "Build for arm64 architecture on Linux" FORCE)
-	elseif (GODOT_ARCH STREQUAL "rv64")
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=rv64gc" CACHE STRING "Build for rv64 architecture on Linux" FORCE)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gc" CACHE STRING "Build for rv64 architecture on Linux" FORCE)
-	else ()
-		message(FATAL_ERROR "Unsupported architecture ${GODOT_ARCH} for Linux")
-	endif ()
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-	set(GODOT_PLATFORM "windows")
-	if (GODOT_ARCH STREQUAL "x86_32")
-		set(CMAKE_GENERATOR_PLATFORM "Win32" CACHE STRING "Build for x86_32 architecture on Windows" FORCE)
-	elseif (GODOT_ARCH STREQUAL "x86_64")
-		set(CMAKE_GENERATOR_PLATFORM "x64" CACHE STRING "Build for x86_64 architecture on Windows" FORCE)
-	elseif (GODOT_ARCH STREQUAL "arm64")
-		set(CMAKE_GENERATOR_PLATFORM "ARM64" CACHE STRING "Build for arm64 architecture on Windows" FORCE)
-	else ()
-		message(FATAL_ERROR "Unsupported architecture ${GODOT_ARCH} for Windows")
-	endif ()
-elseif (APPLE)
-	if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-		set(GODOT_PLATFORM "macos")
-	elseif (CMAKE_SYSTEM_NAME STREQUAL "iOS")
-		set(GODOT_PLATFORM "ios")
-	else ()
-		message(FATAL_ERROR "Unsupported Apple operating system ${CMAKE_SYSTEM_NAME}")
-	endif ()
-	# Both macOS and iOS use the same CMAKE_OSX_ARCHITECTURES variable (even though iOS is very much not OSX).
-	if (GODOT_ARCH STREQUAL "x86_64")
-		set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "Build only x86_64 architecture for macOS or iOS" FORCE)
-	elseif (GODOT_ARCH STREQUAL "arm64")
-		set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build only arm64 architecture for macOS or iOS" FORCE)
-	elseif (GODOT_ARCH STREQUAL "universal")
-		set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Build universal architectures for macOS or iOS" FORCE)
-	else ()
-		message(FATAL_ERROR "Unsupported architecture ${GODOT_ARCH} for macOS or iOS")
-	endif ()
-else ()
-	message(FATAL_ERROR "Unsupported operating system ${CMAKE_SYSTEM_NAME}")
-endif ()
-
-
-#
-#	Add path to modules
-#
-list( APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/" )
+include(SetGodotArch)
 
 
 #
@@ -274,7 +154,8 @@ else()
 	set(GENERATE_BINDING_PARAMETERS "False")
 endif()
 
-execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import binding_generator; binding_generator.print_file_list(\"${GODOT_GDEXTENSION_API_FILE}\", \"${CMAKE_CURRENT_BINARY_DIR}\", headers=True, sources=True)"
+execute_process(COMMAND 
+	"${Python3_EXECUTABLE}" "-c" "import binding_generator; binding_generator.print_file_list(\"${GODOT_GDEXTENSION_API_FILE}\", \"${CMAKE_CURRENT_BINARY_DIR}\", headers=True, sources=True)"
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT_VARIABLE GENERATED_FILES_LIST
 	OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -305,10 +186,10 @@ add_custom_command(OUTPUT ${GENERATED_FILES_LIST}
 #	Set Sources
 #
 set(SOURCES 
-	"src/godot.cpp" "src/classes/editor_plugin_registration.cpp" "src/classes/low_level.cpp" "src/wrapped.cpp"
-	"src/core/class_db.cpp" "src/core/error_macros.cpp" "src/core/memory.cpp" "src/core/method_bind.cpp" "/src/core/object.cpp"
+	"src/godot.cpp" "src/classes/editor_plugin_registration.cpp" "src/classes/low_level.cpp" "src/classes/wrapped.cpp"
+	"src/core/class_db.cpp" "src/core/error_macros.cpp" "src/core/memory.cpp" "src/core/method_bind.cpp" "src/core/object.cpp"
 	"src/variant/aabb.cpp" "src/variant/basis.cpp" "src/variant/callable_custom.cpp" "src/variant/callable_method_pointer.cpp" "src/variant/char_string.cpp"
-	"src/variant/color.cpp" "src/variant/packed_arrays.cpp" "src/variant/plane.cpp" "src/variant/projection.cpp" "src/variant/quartenion.cpp" "src/variant/rect2.cpp"
+	"src/variant/color.cpp" "src/variant/packed_arrays.cpp" "src/variant/plane.cpp" "src/variant/projection.cpp" "src/variant/quaternion.cpp" "src/variant/rect2.cpp"
 	"src/variant/rect2i.cpp" "src/variant/transform2d.cpp" "src/variant/transform3d.cpp" "src/variant/variant.cpp" "src/variant/vector2.cpp" "src/variant/vector2i.cpp"
 	"src/variant/vector3.cpp" "src/variant/vector4.cpp" "src/variant/vector4i.cpp")
 set(HEADERS 
@@ -331,13 +212,18 @@ set(HEADERS
 #
 #	Define our godot-cpp library project
 #
-add_library(${PROJECT_NAME} STATIC
+add_library(${PROJECT_NAME} 
+	STATIC
 		${SOURCES}
 		${HEADERS}
 		${GENERATED_FILES_LIST}
 )
 add_library(godot::cpp ALIAS ${PROJECT_NAME})
 
+
+#
+#	Include GodotCompilerWarnings
+#
 include(GodotCompilerWarnings)
 
 
@@ -351,7 +237,7 @@ target_compile_features(${PROJECT_NAME}
 
 
 #
-#	Set compile definitions
+#	Set compile definitions when in debug build
 #
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	target_compile_definitions(${PROJECT_NAME} PUBLIC
@@ -391,6 +277,7 @@ set(GODOT_CPP_SYSTEM_HEADERS_ATTRIBUTE "")
 if (GODOT_CPP_SYSTEM_HEADERS)
 	set(GODOT_CPP_SYSTEM_HEADERS_ATTRIBUTE SYSTEM)
 endif ()
+
 
 #
 #	Set include directories
