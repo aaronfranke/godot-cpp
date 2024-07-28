@@ -1,25 +1,50 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.20)
 project(godot-cpp-test LANGUAGES CXX)
 
-set(GODOT_GDEXTENSION_DIR "../gdextension/" CACHE STRING "Path to GDExtension interface header directory")
-#
-#	Set CPP_BINDINGS_PATH to one path above this one
-#
-cmake_path(SET CPP_BINDINGS_PATH NORMALIZE "../")
-cmake_path(ABSOLUTE_PATH CPP_BINDINGS_PATH NORMALIZE)
 
-message(${CPP_BINDINGS_PATH})
+#
+#	Set GodotCPPProjectPath and GDExtensionDir to one path above this one
+#
+cmake_path(SET GodotCPPProjectPath NORMALIZE "../")
+cmake_path(ABSOLUTE_PATH GodotCPPProjectPath NORMALIZE)
+cmake_path(SET GODOT_GDEXTENSION_DIR NORMALIZE "../gdextension")
+cmake_path(ABSOLUTE_PATH GODOT_GDEXTENSION_DIR NORMALIZE)
 
-include_directories(${CPP_BINDINGS_PATH})
+#
+#	Include godot-cpp's custom cmake modules
+#
+cmake_path(SET MODULES_PATH NORMALIZE "../cmake")
+cmake_path(ABSOLUTE_PATH MODULES_PATH NORMALIZE)
+list(APPEND CMAKE_MODULE_PATH ${MODULES_PATH})
+
+
+#
+#	Detect host architecture
+#
+include(DetectHostArchitecture)
+
+
+#
+#	Set Godot architecture and Platform variables
+#
+include(SetGodotArch)
+
+
+#
+#	Include directories and godot-cpp CMake Project
+#
+#include_directories(${GodotCPPProjectPath})
+#add_subdirectory(${GodotCPPProjectPath})
+#include(${GodotCPPProjectPath}CMakeLists.txt)
 
 
 # Aragubas: These checks need to go right after including godot-cpp's CMakeLists.txt
-#if (NOT DEFINED GODOT_ARCH)
-#	message(FATAL_ERROR "Expected GODOT_ARCH to be defined by godot-cpp's CMakeLists.txt")
-#endif ()
-#if (NOT DEFINED GODOT_PLATFORM)
-#	message(FATAL_ERROR "Expected GODOT_PLATFORM to be defined by godot-cpp's CMakeLists.txt")
-#endif ()
+if (NOT DEFINED GODOT_ARCH)
+	message(FATAL_ERROR "Expected GODOT_ARCH to be defined by godot-cpp's CMakeLists.txt")
+endif ()
+if (NOT DEFINED GODOT_PLATFORM)
+	message(FATAL_ERROR "Expected GODOT_PLATFORM to be defined by godot-cpp's CMakeLists.txt")
+endif ()
 
 
 #
@@ -29,12 +54,13 @@ set(BUILD_PATH ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${BUILD_PATH}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BUILD_PATH}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BUILD_PATH}")
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+
 
 #
 #	Set Default build type to Debug
@@ -53,6 +79,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(GODOT_COMPILE_FLAGS "")
 set(GODOT_LINKER_FLAGS "")
+
 
 #
 #	Set godot compile flags
@@ -123,14 +150,24 @@ set(HEADERS "src/example.h" "src/register_types.h" "src/tests.h")
 
 
 #
-#	Define our godot-cpp library
+#	Define project
 #
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+
+#
+#	Include GodotCompileWarnings
+#
+include(GodotCompilerWarnings)
+
+
+#
+#	Set include directories
+#
 target_include_directories(${PROJECT_NAME} SYSTEM
 	PRIVATE
-		${CPP_BINDINGS_PATH}include
-		${CPP_BINDINGS_PATH}gen/include
+		${GodotCPPProjectPath}include
+		${GodotCPPProjectPath}cmake_build/gen/include
 		${GODOT_GDEXTENSION_DIR}
 )
 
@@ -146,13 +183,14 @@ else()
 endif()
 string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
 
+
 #
-#	Link with godot-cpp
+#	Link with godot-cpp object file
 #
 if(CMAKE_VERSION VERSION_GREATER "3.13")
 	target_link_directories(${PROJECT_NAME}
 		PRIVATE
-		${CPP_BINDINGS_PATH}cmake_build/bin
+		${GodotCPPProjectPath}cmake_build/bin
 	)
 
 	target_link_libraries(${PROJECT_NAME}
@@ -160,7 +198,7 @@ if(CMAKE_VERSION VERSION_GREATER "3.13")
 	)
 else()
 	target_link_libraries(${PROJECT_NAME}
-			${CPP_BINDINGS_PATH}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
+			${GodotCPPProjectPath}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
 	)
 endif()
 
