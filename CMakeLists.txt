@@ -98,9 +98,10 @@ endif()
 
 
 #
-#	Godot compile flags
+#	Set Godot compile flags
 #
 set(GODOT_COMPILE_FLAGS)
+
 
 # If compiling with MSVC
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
