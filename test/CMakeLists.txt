@@ -76,18 +76,13 @@ set(GODOT_LINKER_FLAGS "")
 
 
 #
-#	Set godot compile flags
-#
-
-
-#
 #	Set Godot compile flags
 #
-set(GODOT_COMPILE_FLAGS)
+set(SetGodotCompileFlags)
 
 
 #
-#	Disable exception handling. Godot doesn't use exceptions anywhere, and this
+#	Disable exception handling. Godot do+esn't use exceptions anywhere, and this
 #	saves around 20% of binary size and very significant build time (GH-80513).
 #
 include(DisableExceptions)
