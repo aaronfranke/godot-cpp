@@ -3,10 +3,10 @@ project(godot-cpp-test LANGUAGES CXX)
 
 
 #
-#	Set GodotCPPProjectPath and GDExtensionDir to one path above this one
+#	Set GODOT_CPP_DIR and GDExtensionDir to one path above this one
 #
-cmake_path(SET GodotCPPProjectPath NORMALIZE "../")
-cmake_path(ABSOLUTE_PATH GodotCPPProjectPath NORMALIZE)
+cmake_path(SET GODOT_CPP_DIR NORMALIZE "../")
+cmake_path(ABSOLUTE_PATH GODOT_CPP_DIR NORMALIZE)
 cmake_path(SET GODOT_GDEXTENSION_DIR NORMALIZE "../gdextension")
 cmake_path(ABSOLUTE_PATH GODOT_GDEXTENSION_DIR NORMALIZE)
 
@@ -31,14 +31,8 @@ include(SetGodotArch)
 
 
 #
-#	Include directories and godot-cpp CMake Project
+#	Aragubas: These checks need to go right after including godot-cpp's CMakeLists.txt
 #
-#include_directories(${GodotCPPProjectPath})
-#add_subdirectory(${GodotCPPProjectPath})
-#include(${GodotCPPProjectPath}CMakeLists.txt)
-
-
-# Aragubas: These checks need to go right after including godot-cpp's CMakeLists.txt
 if (NOT DEFINED GODOT_ARCH)
 	message(FATAL_ERROR "Expected GODOT_ARCH to be defined by godot-cpp's CMakeLists.txt")
 endif ()
@@ -84,62 +78,19 @@ set(GODOT_LINKER_FLAGS "")
 #
 #	Set godot compile flags
 #
-# If compiling under MSVC
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /WX") # /GF /MP
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /DTYPED_METHOD_BIND")
 
-	if(CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MDd") # /Od /RTC1 /Zi
-	else()
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /MD /O2") # /Oy /GL /Gy
-		STRING(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-	endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
-	# Disable conversion warning, truncation, unreferenced var, signed mismatch
-	set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /wd4244 /wd4305 /wd4101 /wd4018 /wd4267")
-
-	add_definitions(-DNOMINMAX)
-
-	# Uncomment for warning level 4
-	#if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-	#	string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-	#endif()
-
-else()
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-		set(GODOT_LINKER_FLAGS "-static-libgcc -static-libstdc++ -Wl,-R,'$ORIGIN'")
-	else()
-		set(GODOT_LINKER_FLAGS "-Wl,-rpath,'$ORIGIN'")
-	endif()
-
-	set(GODOT_COMPILE_FLAGS "-fPIC -g -Wwrite-strings")
-
-	if(CMAKE_BUILD_TYPE MATCHES Debug)
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-omit-frame-pointer -O0")
-	else()
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -O3")
-	endif(CMAKE_BUILD_TYPE MATCHES Debug)
-endif()
+#
+#	Set Godot compile flags
+#
+set(GODOT_COMPILE_FLAGS)
 
 
 #
 #	Disable exception handling. Godot doesn't use exceptions anywhere, and this
 #	saves around 20% of binary size and very significant build time (GH-80513).
 #
-option(GODOT_DISABLE_EXCEPTIONS ON "Force disabling exception handling code")
-if (GODOT_DISABLE_EXCEPTIONS)
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -D_HAS_EXCEPTIONS=0")
-	else()
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} -fno-exceptions")
-	endif()
-else()
-	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-		set(GODOT_COMPILE_FLAGS "${GODOT_COMPILE_FLAGS} /EHsc")
-	endif()
-endif()
+include(DisableExceptions)
 
 
 #
@@ -166,8 +117,8 @@ include(GodotCompilerWarnings)
 #
 target_include_directories(${PROJECT_NAME} SYSTEM
 	PRIVATE
-		${GodotCPPProjectPath}include
-		${GodotCPPProjectPath}cmake_build/gen/include
+		${GODOT_CPP_DIR}include
+		${GODOT_CPP_DIR}cmake_build/gen/include
 		${GODOT_GDEXTENSION_DIR}
 )
 
@@ -190,7 +141,7 @@ string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
 if(CMAKE_VERSION VERSION_GREATER "3.13")
 	target_link_directories(${PROJECT_NAME}
 		PRIVATE
-		${GodotCPPProjectPath}cmake_build/bin
+		${GODOT_CPP_DIR}cmake_build/bin
 	)
 
 	target_link_libraries(${PROJECT_NAME}
@@ -198,7 +149,7 @@ if(CMAKE_VERSION VERSION_GREATER "3.13")
 	)
 else()
 	target_link_libraries(${PROJECT_NAME}
-			${GodotCPPProjectPath}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
+			${GODOT_CPP_DIR}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
 	)
 endif()
 
