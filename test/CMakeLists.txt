@@ -3,10 +3,10 @@ project(godot-cpp-test LANGUAGES CXX)
 
 
 #
-#	Set GODOT_CPP_DIR and GDExtensionDir to one path above this one
+#	Set CPP_BINDINGS_PATH and GDExtensionDir to one path above this one
 #
-cmake_path(SET GODOT_CPP_DIR NORMALIZE "../")
-cmake_path(ABSOLUTE_PATH GODOT_CPP_DIR NORMALIZE)
+cmake_path(SET CPP_BINDINGS_PATH NORMALIZE "../")
+cmake_path(ABSOLUTE_PATH CPP_BINDINGS_PATH NORMALIZE)
 cmake_path(SET GODOT_GDEXTENSION_DIR NORMALIZE "../gdextension")
 cmake_path(ABSOLUTE_PATH GODOT_GDEXTENSION_DIR NORMALIZE)
 
@@ -112,8 +112,8 @@ include(GodotCompilerWarnings)
 #
 target_include_directories(${PROJECT_NAME} SYSTEM
 	PRIVATE
-		${GODOT_CPP_DIR}include
-		${GODOT_CPP_DIR}cmake_build/gen/include
+		${CPP_BINDINGS_PATH}include
+		${CPP_BINDINGS_PATH}cmake_build/gen/include
 		${GODOT_GDEXTENSION_DIR}
 )
 
@@ -136,7 +136,7 @@ string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
 if(CMAKE_VERSION VERSION_GREATER "3.13")
 	target_link_directories(${PROJECT_NAME}
 		PRIVATE
-		${GODOT_CPP_DIR}cmake_build/bin
+		${CPP_BINDINGS_PATH}cmake_build/bin
 	)
 
 	target_link_libraries(${PROJECT_NAME}
@@ -144,7 +144,7 @@ if(CMAKE_VERSION VERSION_GREATER "3.13")
 	)
 else()
 	target_link_libraries(${PROJECT_NAME}
-			${GODOT_CPP_DIR}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
+			${CPP_BINDINGS_PATH}bin/libgodot-cpp.${GODOT_PLATFORM}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${GODOT_ARCH}>.a
 	)
 endif()
 
